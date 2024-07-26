@@ -1,32 +1,85 @@
-#include <stdio.h>
-#include <stdlib.h>
-typedef struct {
-	int data; // 数据节点
-	struct TreeNode *left; // 指向左子树
-	struct TreeNode *right; // 指向右子树
-} TreeNode , *PTreeNode;
+package main
 
-// 记录平衡二叉树
-bool BalanceTrue = false;
-// 最小不平衡子树地址
-TreeNode *rjt = NULL;
+import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"fmt"
+	"time"
 
-// 检查二叉树是否平衡，若不平衡 BalanceTrue 为 true
-int checkTreeBalance(TreeNode *root) {
-	if (NULL == root) { return 0; }
-	int x = checkTreeBalance(root->left);
-	int y = checkTreeBalance(root->right);
+	"cxchain223/blockchain"
+	"cxchain223/kvstore"
+	"cxchain223/maker"
+	"cxchain223/statdb"
+	"cxchain223/statemachine"
+	"cxchain223/txpool"
+	"cxchain223/types"
+	"cxchain223/utils/hash"
+)
 
-	// 若检测到最小不平衡二叉树后，不进行后面的检查
-	if (BalanceTrue) return 0;
+func main() {
+	// 初始化区块链环境
+	db := kvstore.NewLevelDB("./levedb")
+	defer db.Close()
 
-	int xx = abs(x-y);
+	genesisRoot := hash.Hash{}
+	stateDB := statdb.NewMPTStatDB(db, genesisRoot)
+	txPool := txpool.NewDefaultPool(stateDB)
 
-	if (xx > 1) {
-			// 左子树 和 右子树 相差大于1 ， 二叉树不平衡
-			BalanceTrue = true;
-			rjt = root;
+	genesisHeader := blockchain.Header{
+		Root:       genesisRoot,
+		ParentHash: hash.Hash{},
+		Height:     0,
+		Coinbase:   types.Address{},
+		Timestamp:  uint64(time.Now().Unix()),
+		Nonce:      0,
 	}
-	 
-	return (x>y?x+1:y+1);
+
+	chain := blockchain.NewBlockchain(genesisHeader, stateDB, txPool)
+
+	config := maker.ChainConfig{
+		Duration:   10 * time.Second,
+		Coinbase:   types.Address{},
+		Difficulty: 16,
+	}
+
+	exec := statemachine.StateMachine{}
+	blockMaker := maker.NewBlockMaker(txPool, stateDB, exec, *chain, config)
+
+	privateKey, err := generatePrivateKey()
+	if err != nil {
+		fmt.Println("Failed to generate private key:", err)
+		return
+	}
+
+	addTransactions(txPool, privateKey)
+
+	blockMaker.NewBlock()
+	go blockMaker.Pack()
+
+	time.Sleep(1 * time.Second)
+
+	blockMaker.Interupt()
+
+	header, body := blockMaker.Finalize()
+
+	fmt.Printf("New block created with header: %+v and body: %+v\n", header, body)
+}
+
+// 生成并返回一个新的ECDSA私钥
+func generatePrivateKey() (*ecdsa.PrivateKey, error) {
+	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+}
+
+// 模拟并添加一些交易到交易池中
+func addTransactions(txPool *txpool.DefaultPool, privateKey *ecdsa.PrivateKey) {
+	for i := 0; i < 5; i++ {
+		tx := types.NewTransaction(types.Address{}, uint64(i+1), uint64(100), uint64(21000), uint64(i+1), []byte{})
+		err := types.SignTx(&tx, privateKey)
+		if err != nil {
+			fmt.Println("Failed to sign transaction:", err)
+			return
+		}
+		txPool.NewTx(&tx)
+	}
 }
