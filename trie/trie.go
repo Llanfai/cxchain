@@ -8,7 +8,8 @@ import (
 	"cxchain223/utils/hexutil"
 	"cxchain223/utils/rlp"
 	"errors"
-	"fmt"
+
+	// "fmt"
 	"math/big"
 	"sort"
 	"strings"
@@ -102,6 +103,10 @@ func (node TrieNode) Hash() hash.Hash {
 	return sha3.Keccak256(data)
 }
 
+func (state *State) DB() kvstore.KVDatabase {
+	return state.db
+}
+
 func (state State) Root() hash.Hash {
 	return state.root.Hash()
 }
@@ -119,8 +124,8 @@ func (state *State) SaveNode(node TrieNode) {
 func (state State) Load(key []byte) ([]byte, error) {
 	path := hexutil.Encode(key)
 	paths, hashes := state.FindAncestors(path)
-	fmt.Println(paths)
-	fmt.Println(hashes)
+	// fmt.Println(paths)
+	// fmt.Println(hashes)
 
 	matched := strings.Join(paths, "")
 	if strings.EqualFold(path, matched) {
@@ -262,7 +267,3 @@ func prefixLength(s1, s2 string) int {
 	}
 	return length
 }
-
-// func (state *State) Execute(tx types.Transaction) {
-// 	// TODO
-// }

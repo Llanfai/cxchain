@@ -2,14 +2,13 @@ package hash
 
 import (
 	"bytes"
+	"cxchain223/utils/hexutil"
 	"database/sql/driver"
 	"encoding/hex"
 	"fmt"
 	"math/big"
 	"math/rand"
 	"reflect"
-
-	"cxchain223/utils/hexutil"
 )
 
 const (

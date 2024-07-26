@@ -2,7 +2,7 @@ package blockchain
 
 import (
 	"cxchain223/crypto/sha3"
-	"cxchain223/trie"
+	"cxchain223/statdb"
 	"cxchain223/txpool"
 	"cxchain223/types"
 	"cxchain223/utils/hash"
@@ -46,6 +46,14 @@ func NewBlock() *Body {
 
 type Blockchain struct {
 	CurrentHeader Header
-	Statedb       trie.ITrie
+	Statedb       statdb.StatDB
 	Txpool        txpool.TxPool
+}
+
+func NewBlockchain(header Header, statedb statdb.StatDB, txpool txpool.TxPool) *Blockchain {
+	return &Blockchain{
+		CurrentHeader: header,
+		Statedb:       statedb,
+		Txpool:        txpool,
+	}
 }
